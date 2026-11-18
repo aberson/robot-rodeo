@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>robot-rodeo — proposal</title>
+<style>
+  :root {
+    --ground: #f5f8f7; --surface: #ffffff; --surface-2: #eef3f2;
+    --ink: #16201e; --ink-soft: #45524f; --muted: #64726e;
+    --hairline: #d8e0dd; --hairline-strong: #c3cecb;
+    --accent: #0d8577; --accent-ink: #075a50; --accent-soft: #e0f0ed;
+    --turn: #a5680f; --turn-soft: #f6ecd8;
+    --shadow: 0 1px 2px rgba(20,40,36,.05), 0 8px 24px -12px rgba(20,40,36,.14);
+    --sans: system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0c1312; --surface: #131c1b; --surface-2: #17211f;
+      --ink: #e9efed; --ink-soft: #aab5b2; --muted: #7d8b88;
+      --hairline: #243230; --hairline-strong: #31413e;
+      --accent: #3bb6a6; --accent-ink: #7fd6c9; --accent-soft: #123c37;
+      --turn: #d69b4f; --turn-soft: #372c16;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f5f8f7; --surface: #ffffff; --surface-2: #eef3f2;
+    --ink: #16201e; --ink-soft: #45524f; --muted: #64726e;
+    --hairline: #d8e0dd; --hairline-strong: #c3cecb;
+    --accent: #0d8577; --accent-ink: #075a50; --accent-soft: #e0f0ed;
+    --turn: #a5680f; --turn-soft: #f6ecd8;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0c1312; --surface: #131c1b; --surface-2: #17211f;
+    --ink: #e9efed; --ink-soft: #aab5b2; --muted: #7d8b88;
+    --hairline: #243230; --hairline-strong: #31413e;
+    --accent: #3bb6a6; --accent-ink: #7fd6c9; --accent-soft: #123c37;
+    --turn: #d69b4f; --turn-soft: #372c16;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 4rem; }
+  .eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); font-weight: 600; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); line-height: 1.02; margin: .5rem 0 0; letter-spacing: -.02em; font-weight: 680; }
+  h1 .cmd { font-family: var(--mono); font-weight: 600; }
+  h1 .dash { color: var(--accent); }
+  .thesis { font-size: clamp(1.05rem, 2.4vw, 1.3rem); color: var(--ink-soft); margin: .9rem 0 0; max-width: 46ch; }
+  .ribbon { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: .8rem; }
+  .chip { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--hairline-strong); background: var(--surface); color: var(--ink-soft); white-space: nowrap; }
+  .chip.hot { border-color: var(--turn); color: var(--turn); background: var(--turn-soft); font-weight: 600; }
+  .chip .dot { width: .5rem; height: .5rem; border-radius: 999px; background: var(--turn); }
+  section { margin-top: clamp(2.25rem, 5vw, 3.25rem); }
+  .kicker { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 .9rem; display: flex; align-items: center; gap: .6rem; }
+  .kicker::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+  h2 { font-size: 1.5rem; margin: 0 0 .5rem; letter-spacing: -.01em; font-weight: 660; }
+  p.lead { margin: 0 0 1.25rem; color: var(--ink-soft); max-width: 62ch; }
+  code { font-family: var(--mono); font-size: .84em; color: var(--accent-ink); background: var(--accent-soft); padding: .05rem .3rem; border-radius: 4px; }
+  .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; box-shadow: var(--shadow); }
+  .heard { padding: clamp(1.1rem, 3vw, 1.6rem); }
+  .heard-grid { display: grid; gap: 1rem 1.4rem; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 44rem) { .heard-grid { grid-template-columns: 1fr; } }
+  .heard-item { display: flex; gap: .65rem; align-items: flex-start; }
+  .heard-item .mk { color: var(--accent); font-weight: 700; flex: none; }
+  .heard-item b { font-weight: 620; }
+  .heard-item .ask { color: var(--muted); font-size: .84rem; font-style: italic; display: block; margin-bottom: .1rem; }
+  .heard-item .becomes { color: var(--ink-soft); font-size: .92rem; }
+  .sep { padding: 1rem 1.2rem; }
+  .sep table { width: 100%; border-collapse: collapse; font-size: .89rem; }
+  .sep th { text-align: left; font-family: var(--mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: .5rem .6rem; border-bottom: 1px solid var(--hairline-strong); }
+  .sep td { padding: .5rem .6rem; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-soft); }
+  .sep td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+  .sep tr:last-child td { border-bottom: none; }
+  ol.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  ol.timeline li { display: grid; grid-template-columns: auto 1fr; gap: 0 1rem; }
+  .tl-mark { display: flex; flex-direction: column; align-items: center; }
+  .tl-num { font-family: var(--mono); font-size: .8rem; font-weight: 600; width: 1.9rem; height: 1.9rem; display: grid; place-items: center; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); border: 1px solid var(--accent); flex: none; }
+  .tl-line { width: 2px; flex: 1; background: var(--hairline); margin: .25rem 0; min-height: .5rem; }
+  ol.timeline li:last-child .tl-line { display: none; }
+  .tl-body { padding-bottom: 1.3rem; }
+  .tl-body .th { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+  .tl-body .tt { font-weight: 620; }
+  .tl-body .iss { font-family: var(--mono); font-size: .76rem; color: var(--muted); }
+  .tl-body .mstep { font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--turn); background: var(--turn-soft); padding: .1rem .4rem; border-radius: 5px; font-weight: 600; }
+  .tl-body p { margin: .25rem 0 0; color: var(--ink-soft); font-size: .9rem; max-width: 60ch; }
+  .tl-body .after { margin-top: .45rem; font-size: .88rem; color: var(--ink-soft); display: flex; gap: .5rem; }
+  .tl-body .after .arw { color: var(--accent); font-weight: 700; flex: none; }
+  .tl-body .after b { font-weight: 630; color: var(--ink); }
+  .decisions { display: flex; flex-direction: column; gap: .6rem; }
+  .dec { display: grid; grid-template-columns: auto 1fr; gap: .8rem; padding: .8rem 1rem; align-items: start; }
+  .dec .id { font-family: var(--mono); font-size: .74rem; font-weight: 700; color: var(--turn); background: var(--turn-soft); border: 1px solid var(--turn); border-radius: 6px; padding: .18rem .45rem; margin-top: .15rem; white-space: nowrap; }
+  .dec .what { display: block; font-size: .93rem; }
+  .dec .what b { font-weight: 630; }
+  .dec .why { display: block; color: var(--ink-soft); font-size: .86rem; margin-top: .15rem; }
+  .dec .tweak { display: block; color: var(--muted); font-size: .82rem; margin-top: .2rem; }
+  .dec .tweak em { font-style: normal; color: var(--turn); font-weight: 600; }
+  .picked { padding: 1rem 1.2rem; }
+  .picked-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem 1.6rem; }
+  @media (max-width: 44rem) { .picked-grid { grid-template-columns: 1fr; } }
+  .pk { display: flex; gap: .6rem; align-items: baseline; font-size: .9rem; }
+  .pk .pid { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: var(--accent-ink); flex: none; width: 2.1rem; }
+  .pk b { font-weight: 620; }
+  .pk .v { color: var(--ink-soft); }
+  .cuts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 44rem) { .cuts { grid-template-columns: 1fr; } }
+  .cut-card { padding: 1rem 1.1rem; }
+  .cut-card .dh { font-weight: 630; margin-bottom: .35rem; display: flex; align-items: center; gap: .5rem; }
+  .cut-card .badge { font-family: var(--mono); font-size: .62rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--hairline-strong); border-radius: 5px; padding: .15rem .4rem; }
+  .cut-card ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: .9rem; }
+  .cut-card li { margin: .2rem 0; }
+  .risk-wrap { overflow-x: auto; }
+  .risk-table { width: 100%; border-collapse: collapse; font-size: .89rem; }
+  .risk-table th { text-align: left; font-family: var(--mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: .5rem .8rem; border-bottom: 1px solid var(--hairline-strong); }
+  .risk-table td { padding: .55rem .8rem; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-soft); }
+  .risk-table td:first-child { color: var(--ink); font-weight: 600; }
+  .risk-table tr:last-child td { border-bottom: none; }
+  .fb { padding: clamp(1.1rem, 3vw, 1.5rem); }
+  .fb-ex { font-family: var(--mono); font-size: .88rem; color: var(--ink); background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: .75rem 1rem; margin: .8rem 0 1rem; overflow-x: auto; white-space: pre; }
+  .fb-ex .c { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: .55rem 1.1rem; margin: 1.1rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--hairline); }
+  .kv dt { font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .kv dd { margin: 0; font-family: var(--mono); font-size: .88rem; color: var(--ink); word-break: break-word; }
+  footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); color: var(--muted); font-size: .8rem; font-family: var(--mono); display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
+  a { color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: no-preference) {
+    section { animation: rise .5s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">Proposal &middot; new project &middot; publication 1 &middot; awaiting your tweaks</div>
+    <h1><span class="cmd">robot<span class="dash">-</span>rodeo</span></h1>
+    <p class="thesis">Learn robot learning by doing it: watch trained robots in simulation, train your own overnight, drive one with the keyboard &mdash; and be ready for a real arm by Christmas.</p>
+    <div class="ribbon">
+      <span class="chip hot"><span class="dot"></span>Proposal &mdash; nothing built yet</span>
+      <span class="chip">plan written 2026-11-18 &middot; reviewed</span>
+      <span class="chip">9 steps (1 overnight wait) + 4 manual</span>
+      <span class="chip">LeRobot 0.7.0 &middot; RTX 4070 8 GB</span>
+      <span class="chip">public repo &middot; local only</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="heard">
+    <p class="kicker">What I heard</p>
+    <h2 id="heard">Six asks, six deliverables.</h2>
+    <p class="lead">My read of what you asked for. If a mapping is off, flag that first.</p>
+    <div class="card heard">
+      <div class="heard-grid">
+        <div class="heard-item"><span class="mk">1</span><span><span class="ask">"Start in simulation, no hardware"</span><span class="becomes">Three <b>simulators</b> on your laptop: PushT (2D push-the-T), ALOHA (two arms passing a cube) and a Franka Panda arm picking up a cube.</span></span></div>
+        <div class="heard-item"><span class="mk">2</span><span><span class="ask">"I don't know much about robots"</span><span class="becomes"><b>Eight plain-language explainers</b> in <code>docs/learn/</code>, one per step, each ending with &ldquo;What to look for&rdquo;.</span></span></div>
+        <div class="heard-item"><span class="mk">3</span><span><span class="ask">"Watch it work" (goal a)</span><span class="becomes">Pretrained policies evaluated for 50 episodes each, with a <b>clip and a log entry</b> per run.</span></span></div>
+        <div class="heard-item"><span class="mk">4</span><span><span class="ask">"Train your own" (goal b)</span><span class="becomes">An <b>overnight PushT training run</b> sized to 8 hours on your GPU, then a side-by-side against the pretrained policy.</span></span></div>
+        <div class="heard-item"><span class="mk">5</span><span><span class="ask">"Drive and record" (goal c), no gamepad</span><span class="becomes"><b>Keyboard demos</b> in the Panda simulator, an ACT policy trained on them, and its evaluation &mdash; the same workflow a real SO-101 uses.</span></span></div>
+        <div class="heard-item"><span class="mk">6</span><span><span class="ask">"SO-101 arm kit, maybe for Christmas" (goal d)</span><span class="becomes">A dated <b>buying note</b> by 2026-12-05: three or more kit options, extras, budget range, setup time.</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="shape">
+    <p class="kicker">Why this shape</p>
+    <h2 id="shape">LeRobot does the robotics; <code>rodeo</code> keeps the notebook.</h2>
+    <p class="lead">Every experiment is a small recipe file. <code>rodeo run &lt;recipe&gt;</code> runs LeRobot's own command, then writes a log record, a readable entry and a short clip. Nothing is re-implemented, so LeRobot's docs and community answers apply directly.</p>
+    <div class="card sep">
+      <table>
+        <tr><th>Checked before planning</th><th>What it means here</th></tr>
+        <tr><td>LeRobot 0.7.0</td><td>Python 3.12+, installs on Windows with uv; pinned for reproducible results</td></tr>
+        <tr><td>Pretrained models</td><td><code>lerobot/diffusion_pusht</code> and <code>lerobot/act_aloha_sim_transfer_cube_human</code> exist on the Hub</td></tr>
+        <tr><td>Keyboard sim</td><td><code>PandaPickCubeKeyboard-v0</code> supports recording; one dependency (<code>placo</code>) has no Windows build, so WSL2 may be needed</td></tr>
+        <tr><td>Your laptop</td><td>Driver 596.49 (CUDA 13.2), ffmpeg 8.0.1 and WSL2 Ubuntu already present; 124 GB free</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="phases">
+    <p class="kicker">What lands, stage by stage</p>
+    <h2 id="phases">Five stages, each ending with something to watch or read.</h2>
+    <ol class="timeline">
+      <li>
+        <div class="tl-mark"><div class="tl-num">A</div><div class="tl-line"></div></div>
+        <div class="tl-body"><div class="th"><span class="tt">Set up and check</span><span class="iss">steps 1&ndash;2</span></div>
+          <p>Install LeRobot, confirm the GPU works, try each simulator natively (WSL2 for any that fail), and build the <code>rodeo</code> runner and experiment log.</p>
+          <div class="after"><span class="arw">&rarr;</span><span><b>Afterwards:</b> <code>uv run python scripts/probe.py</code> and <code>uv run rodeo list</code>.</span></div></div>
+      </li>
+      <li>
+        <div class="tl-mark"><div class="tl-num">B</div><div class="tl-line"></div></div>
+        <div class="tl-body"><div class="th"><span class="tt">Watch it work</span><span class="iss">step 3</span><span class="mstep">M1: watch the clips</span></div>
+          <p>Pretrained PushT and ALOHA policies, 50 episodes each, with clips and success rates.</p>
+          <div class="after"><span class="arw">&rarr;</span><span><b>Afterwards:</b> <code>uv run rodeo run pusht-pretrained-eval</code>.</span></div></div>
+      </li>
+      <li>
+        <div class="tl-mark"><div class="tl-num">C</div><div class="tl-line"></div></div>
+        <div class="tl-body"><div class="th"><span class="tt">Train your own</span><span class="iss">steps 4&ndash;7</span><span class="mstep">overnight wait</span></div>
+          <p>A 2-minute smoke run measures your GPU, the training recipe is sized to fit 8 hours, it runs overnight, then your policy is compared with the pretrained one.</p>
+          <div class="after"><span class="arw">&rarr;</span><span><b>Afterwards:</b> <code>uv run rodeo compare &lt;own&gt; &lt;pretrained&gt;</code>.</span></div></div>
+      </li>
+      <li>
+        <div class="tl-mark"><div class="tl-num">D</div><div class="tl-line"></div></div>
+        <div class="tl-body"><div class="th"><span class="tt">Drive and record</span><span class="iss">step 8</span><span class="mstep">M2: record demos</span><span class="mstep">M3: train + eval</span></div>
+          <p>Recipes for keyboard recording, ACT training on your demos, and evaluation.</p>
+          <div class="after"><span class="arw">&rarr;</span><span><b>Afterwards:</b> <code>uv run rodeo run panda-cube-record</code>.</span></div></div>
+      </li>
+      <li>
+        <div class="tl-mark"><div class="tl-num">E</div><div class="tl-line"></div></div>
+        <div class="tl-body"><div class="th"><span class="tt">Get ready for hardware</span><span class="iss">step 9</span><span class="mstep">M4: read the note</span></div>
+          <p>The SO-101 buying note plus explainers on sim-to-real and the arm's anatomy.</p>
+          <div class="after"><span class="arw">&rarr;</span><span><b>Afterwards:</b> open <code>docs/so101-buying-note.md</code>.</span></div></div>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="picked">
+    <p class="kicker">Choices you already made</p>
+    <h2 id="picked">Locked in from our planning questions.</h2>
+    <div class="card picked">
+      <div class="picked-grid">
+        <div class="pk"><span class="pid">P1</span><span><b>Repo:</b> <span class="v">public, named robot-rodeo</span></span></div>
+        <div class="pk"><span class="pid">P2</span><span><b>Path:</b> <span class="v">simulation first; SO-101 maybe at Christmas</span></span></div>
+        <div class="pk"><span class="pid">P3</span><span><b>v1:</b> <span class="v">all four goals (watch, train, drive, buy)</span></span></div>
+        <div class="pk"><span class="pid">P4</span><span><b>Sharing:</b> <span class="v">local only; no Hub uploads</span></span></div>
+        <div class="pk"><span class="pid">P5</span><span><b>Controller:</b> <span class="v">keyboard; no gamepad yet</span></span></div>
+        <div class="pk"><span class="pid">P6</span><span><b>Learning:</b> <span class="v">an explainer per step</span></span></div>
+        <div class="pk"><span class="pid">P7</span><span><b>Training:</b> <span class="v">overnight runs OK</span></span></div>
+        <div class="pk"><span class="pid">P8</span><span><b>Runtime:</b> <span class="v">native Windows first, WSL2 fallback</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="defaults">
+    <p class="kicker">Choices I made on your behalf</p>
+    <h2 id="defaults">Defaults worth your eyes. Reference by ID to tweak.</h2>
+    <p class="lead">D11&ndash;D15 came from the plan review you accepted. Amber = my call.</p>
+    <div class="decisions">
+      <div class="card dec"><span class="id">D1</span><span>
+        <span class="what"><b>Pin LeRobot 0.7.0</b> with the pusht, aloha, training and dataset extras.</span>
+        <span class="why">LeRobot changes fast; a pin keeps your results comparable over weeks.</span>
+        <span class="tweak"><em>Tweak:</em> track latest instead (upgrades prompted by community-commando's release watch).</span></span></div>
+      <div class="card dec"><span class="id">D2</span><span>
+        <span class="what"><b>A small <code>rodeo</code> CLI with TOML recipes</b> wrapping LeRobot's own commands.</span>
+        <span class="why">Every experiment becomes one repeatable command with a consistent log entry.</span>
+        <span class="tweak"><em>Tweak:</em> plain PowerShell scripts instead.</span></span></div>
+      <div class="card dec"><span class="id">D3</span><span>
+        <span class="what"><b>Experiment log:</b> append-only JSONL plus a Markdown entry per run with a &ldquo;What I noticed&rdquo; section for you.</span>
+        <span class="why">Machine-readable for comparisons, human-readable for learning in public.</span>
+        <span class="tweak"><em>Tweak:</em> Markdown only.</span></span></div>
+      <div class="card dec"><span class="id">D4</span><span>
+        <span class="what"><b>Clips up to 5 MB go in git;</b> checkpoints and full videos stay in a gitignored outputs folder.</span>
+        <span class="why">The public log can show what happened without committing gigabytes.</span>
+        <span class="tweak"><em>Tweak:</em> the size limit, or GIFs instead of MP4.</span></span></div>
+      <div class="card dec"><span class="id">D5</span><span>
+        <span class="what"><b>8-hour cap per training run,</b> a checkpoint at least every 45 minutes, steps sized from measured speed.</span>
+        <span class="why">Fits one night; a crash or sleep loses under an hour.</span>
+        <span class="tweak"><em>Tweak:</em> the cap (e.g. 6 h).</span></span></div>
+      <div class="card dec"><span class="id">D6</span><span>
+        <span class="what"><b>50 episodes per evaluation.</b></span>
+        <span class="why">Enough for a success rate with a usable confidence interval; minutes per run.</span>
+        <span class="tweak"><em>Tweak:</em> 20 for speed, 100 for precision.</span></span></div>
+      <div class="card dec"><span class="id">D7</span><span>
+        <span class="what"><b>Diffusion policy for PushT; ACT for your keyboard demos; about 20 demos.</b></span>
+        <span class="why">Matches the pretrained references; ACT learns from few demonstrations.</span>
+        <span class="tweak"><em>Tweak:</em> demo count, or try SmolVLA later.</span></span></div>
+      <div class="card dec"><span class="id">D8</span><span>
+        <span class="what"><b>Not in v1:</b> Weights &amp; Biases, Isaac Sim / LeIsaac, LIBERO, reinforcement learning.</span>
+        <span class="why">Online tracking conflicts with local-only; Isaac Sim is heavy for 8 GB; LIBERO is Linux-only; RL is a later topic.</span>
+        <span class="tweak"><em>Tweak:</em> restore any one.</span></span></div>
+      <div class="card dec"><span class="id">D9</span><span>
+        <span class="what"><b>Buying note due 2026-12-05.</b></span>
+        <span class="why">Leaves time to order before Christmas shipping cut-offs.</span>
+        <span class="tweak"><em>Tweak:</em> the date.</span></span></div>
+      <div class="card dec"><span class="id">D10</span><span>
+        <span class="what"><b>Plan lives at <code>docs/plans/master_plan.md</code>.</b></span>
+        <span class="why">Workspace canonical location.</span>
+        <span class="tweak"><em>Tweak:</em> none recommended &mdash; tooling discovers this path.</span></span></div>
+      <div class="card dec"><span class="id">D11</span><span>
+        <span class="what"><b>WSL2 runtime available to every simulator</b> from Step 2, chosen per simulator by the Step 1 check.</span>
+        <span class="why">ALOHA's physics wrapper is unverified on Windows too, not only the keyboard sim.</span>
+        <span class="tweak"><em>Tweak:</em> none recommended.</span></span></div>
+      <div class="card dec"><span class="id">D12</span><span>
+        <span class="what"><b><code>gym-hil</code> declared as the <code>hil</code> extra;</b> the check also imports the recording module.</span>
+        <span class="why">Keeps it through <code>uv sync</code>; catches the <code>placo</code> problem on day one.</span>
+        <span class="tweak"><em>Tweak:</em> none recommended.</span></span></div>
+      <div class="card dec"><span class="id">D13</span><span>
+        <span class="what"><b>One shared outputs folder</b> (<code>RODEO_OUTPUTS</code>, else the main checkout's <code>outputs/</code>).</span>
+        <span class="why">Build worktrees and your own runs see the same checkpoints.</span>
+        <span class="tweak"><em>Tweak:</em> put outputs on another drive.</span></span></div>
+      <div class="card dec"><span class="id">D14</span><span>
+        <span class="what"><b>Explainers are tested:</b> 300&ndash;900 words, ending with &ldquo;What to look for&rdquo;.</span>
+        <span class="why">Makes the learning deliverable a checked part of each step.</span>
+        <span class="tweak"><em>Tweak:</em> the word range.</span></span></div>
+      <div class="card dec"><span class="id">D15</span><span>
+        <span class="what"><b><code>rodeo compare</code> lands in Step 7;</b> data loaders drop below 4 workers if RAM peaks over 12 GB.</span>
+        <span class="why">Smaller steps; your laptop has 16 GB RAM.</span>
+        <span class="tweak"><em>Tweak:</em> the RAM threshold.</span></span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="cuts">
+    <p class="kicker">Not in v1</p>
+    <h2 id="cuts">Cut on purpose.</h2>
+    <div class="cuts">
+      <div class="card cut-card">
+        <div class="dh">Your cuts <span class="badge">from P2, P4, P5</span></div>
+        <ul>
+          <li>Real hardware (a v2 phase after a purchase)</li>
+          <li>Uploading policies or datasets to the Hugging Face Hub</li>
+          <li>Gamepad control</li>
+        </ul>
+      </div>
+      <div class="card cut-card">
+        <div class="dh">My cuts <span class="badge">flag to restore</span></div>
+        <ul>
+          <li>Weights &amp; Biases or other online tracking</li>
+          <li>Isaac Sim / LeIsaac (SO-101 digital twin)</li>
+          <li>LIBERO benchmark (Linux-only)</li>
+          <li>Reinforcement learning (HIL-SERL)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="risks">
+    <p class="kicker">Risks worth knowing</p>
+    <h2 id="risks">What could bite, and the built-in answer.</h2>
+    <div class="card risk-wrap">
+      <table class="risk-table">
+        <tr><th>Risk</th><th>Built-in answer</th></tr>
+        <tr><td>PyTorch installs without GPU support</td><td>Step 1 checks; pins a CUDA 13 build by a stated rule if needed</td></tr>
+        <tr><td>A simulator fails on Windows</td><td>WSL2 runtime per simulator (D11)</td></tr>
+        <tr><td>8 GB GPU / 16 GB RAM limits</td><td>Smoke run finds a batch size that fits and records peak memory (D15)</td></tr>
+        <tr><td>Laptop sleeps or overheats overnight</td><td>Checkpoints every 45 minutes; <code>rodeo run --resume</code> (D5)</td></tr>
+        <tr><td>Your policy scores lower than the pretrained one</td><td>Expected with laptop-sized training; the comparison and explainer say why</td></tr>
+        <tr><td>Kit prices change</td><td>The buying note is dated with linked sources</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="fb">
+    <p class="kicker">Give feedback</p>
+    <h2 id="fb">Scan, then reply in chat. IDs make it cheap.</h2>
+    <div class="card fb">
+      <p class="lead" style="margin:0">Anything you don't mention lands as written. Example reply:</p>
+      <div class="fb-ex">D6 &rarr; 20 episodes              <span class="c"># tweak a default</span>
+P5 &rarr; I bought a gamepad        <span class="c"># reverse a pick</span>
+move Step 9 first             <span class="c"># reshape the plan</span>
+mapping #5 is off: I meant... <span class="c"># fix my read of the ask</span></div>
+      <dl class="kv">
+        <dt>Source of truth</dt><dd>docs/plans/master_plan.md (this page is a view of it)</dd>
+        <dt>Also written</dt><dd>AGENTS.md &middot; CLAUDE.md pointer &middot; observatory registration</dd>
+        <dt>After tweaks</dt><dd>/plan-wrap --autofix &rarr; /repo-init --public &rarr; /build-phase</dd>
+      </dl>
+    </div>
+  </section>
+
+  <footer>
+    <span>robot-rodeo</span><span>&middot;</span><span>proposal for review</span><span>&middot;</span><span>every run leaves something to watch</span>
+  </footer>
+</main>
+</body>
+</html>
